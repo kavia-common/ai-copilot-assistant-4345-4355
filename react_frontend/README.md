@@ -3,10 +3,17 @@
 The frontend provides a simple UI to ask questions and display AI-generated answers.
 
 ## Environment
+Copy `.env.example` to `.env` and adjust if needed.
+
+Required variables:
 - REACT_APP_API_BASE: absolute base URL to the backend API (defaults to http://localhost:3001)
 - REACT_APP_SITE_URL: site URL for future features (defaults to http://localhost:3000)
 
-Copy `.env.example` to `.env` and adjust if needed.
+Example:
+```
+REACT_APP_API_BASE=http://localhost:3001
+REACT_APP_SITE_URL=http://localhost:3000
+```
 
 ### Switching backend port
 The app prefers the backend on port 3001. If your FastAPI backend runs on a different port (e.g., 8000), set:
@@ -33,6 +40,10 @@ Then restart the React dev server (`npm start`) so the new env var is applied.
 ## API routes used
 - POST `/api/ask` for sending the user's question.
 - GET `/api/health` for health checks.
+
+Requests are sent to `${REACT_APP_API_BASE}/api/...`, for example:
+- POST `${REACT_APP_API_BASE}/api/ask`
+- GET `${REACT_APP_API_BASE}/api/health`
 
 ## Where to see detailed error info
 - Open the browser devtools console to view structured error logs, including status codes and backend-provided details.
