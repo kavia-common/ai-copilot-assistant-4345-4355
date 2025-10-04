@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import React, { useState } from "react";
-import api, { getApiBaseUrl } from "./api";
+import api, { API_BASE } from "./api";
 
 /**
  * PUBLIC_INTERFACE
@@ -8,6 +8,7 @@ import api, { getApiBaseUrl } from "./api";
  * - Uses centralized axios instance (src/api.js)
  * - Reads backend base URL from REACT_APP_API_BASE or defaults to http://localhost:3001
  * - Sends POST /api/ask with { question }
+ * - Health check uses GET /api/health
  * - Surfaces detailed backend errors and CORS/network hints
  * - Clears UI error messages before each request
  */
@@ -17,7 +18,7 @@ function App() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const baseUrl = getApiBaseUrl();
+  const baseUrl = API_BASE;
 
   const handleAsk = async (e) => {
     e.preventDefault();
@@ -39,6 +40,20 @@ function App() {
       setLoading(false);
     }
   };
+
+  // Example: health check (could be wired to a button or useEffect if needed)
+  async function checkHealth() {
+    try {
+      await api.get("/api/health");
+      // eslint-disable-next-line no-console
+      console.info("Health check OK");
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("Health check failed", err);
+    }
+  }
+  // Avoid calling automatically to prevent noise; available for debugging.
+  // checkHealth();
 
   return (
     <div
@@ -147,6 +162,22 @@ function App() {
 
           <div style={{ marginTop: 24, fontSize: 12, color: "#6B7280" }}>
             Backend: {baseUrl}
+            <button
+              style={{
+                marginLeft: 12,
+                background: "transparent",
+                border: "1px solid #CBD5E1",
+                color: "#374151",
+                padding: "4px 8px",
+                borderRadius: 6,
+                cursor: "pointer",
+              }}
+              type="button"
+              onClick={checkHealth}
+              title="Ping backend /api/health"
+            >
+              Check health
+            </button>
           </div>
         </main>
       </div>

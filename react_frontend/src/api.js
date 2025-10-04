@@ -6,6 +6,8 @@
  * - Simple one-time retry on network error/timeouts
  */
 
+import axios from "axios";
+
 // PUBLIC_INTERFACE
 export function getApiBaseUrl() {
   /** Returns the base URL for API calls from environment or default. */
@@ -13,10 +15,21 @@ export function getApiBaseUrl() {
   return (envBase && envBase.trim()) || "http://localhost:3001";
 }
 
-import axios from "axios";
+// Expose the effective base URL as a constant for consumers.
+export const API_BASE = getApiBaseUrl();
+
+// Helpful runtime log once at module init to see which base URL is in use.
+if (typeof window !== "undefined") {
+  // eslint-disable-next-line no-console
+  console.info(
+    "[API] Using base URL:",
+    API_BASE,
+    "(set REACT_APP_API_BASE to change)"
+  );
+}
 
 const api = axios.create({
-  baseURL: getApiBaseUrl(),
+  baseURL: API_BASE,
   withCredentials: false,
   timeout: 20000,
   headers: {
@@ -35,7 +48,7 @@ function toUserError(error) {
       message: "Request timed out",
       hint:
         "Backend may be unreachable or slow. Check that the server is running at " +
-        getApiBaseUrl(),
+        API_BASE,
     };
   }
   if (error.response) {
@@ -53,7 +66,7 @@ function toUserError(error) {
     message: "Network error",
     hint:
       "Possible CORS or connectivity issue. Ensure the backend is running at " +
-      getApiBaseUrl() +
+      API_BASE +
       " and CORS allows http://localhost:3000.",
     detail: error.message,
   };
