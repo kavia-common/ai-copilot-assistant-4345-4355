@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import React, { useState } from "react";
-import api, { API_BASE } from "./api";
+import api, { API_BASE, safeStringify } from "./api";
 
 /**
  * PUBLIC_INTERFACE
@@ -27,15 +27,28 @@ function App() {
     setAnswer("");
     setLoading(true);
     try {
+      // axios throws for non-2xx; interceptor maps to friendly Error
       const res = await api.post("/api/ask", { question });
       setAnswer(res?.data?.answer || "");
     } catch (err) {
-      // Error already mapped by interceptor in src/api.js
-      setError(err);
-      console.error("Request failed:", {
-        url: `${baseUrl}/api/ask`,
-        error: err,
-      });
+      if (err instanceof Error) {
+        // Log extra server payload details to console (not UI)
+        const serverPayload =
+          // axios error mapping preserves response on original error, but our interceptor returns Error.
+          // So we cannot rely on err.response here; instead just log detail if present.
+          err.detail ? safeStringify(err.detail) : undefined;
+
+        console.error("❌ Error:", err.message, {
+          url: `${baseUrl}/api/ask`,
+          status: err.status,
+          hint: err.hint,
+          detail: serverPayload,
+        });
+        setError(err);
+      } else {
+        console.error("❌ Unknown error:", err);
+        setError(new Error("Unexpected error occurred."));
+      }
     } finally {
       setLoading(false);
     }
@@ -45,11 +58,17 @@ function App() {
   async function checkHealth() {
     try {
       await api.get("/api/health");
-      // eslint-disable-next-line no-console
       console.info("Health check OK");
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("Health check failed", err);
+      if (err instanceof Error) {
+        const extra = err.detail ? safeStringify(err.detail) : undefined;
+        console.warn("Health check failed:", err.message, {
+          status: err.status,
+          detail: extra,
+        });
+      } else {
+        console.warn("Health check failed with unknown error:", err);
+      }
     }
   }
   // Avoid calling automatically to prevent noise; available for debugging.

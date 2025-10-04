@@ -4,6 +4,7 @@
  * - withCredentials disabled to avoid CORS credential restrictions
  * - 20s timeout
  * - Simple one-time retry on network error/timeouts
+ * - Improved error mapping and message surfacing
  */
 
 import axios from "axios";
@@ -37,39 +38,75 @@ const api = axios.create({
   },
 });
 
-// Map axios/network errors into a friendlier shape for the UI
+/**
+ * Safely stringify any server error payload for console debugging.
+ * Avoids throwing on circular structures and keeps UI messages clean.
+ */
+// PUBLIC_INTERFACE
+export function safeStringify(value) {
+  /** Safely stringify unknown values for console logging. */
+  try {
+    if (typeof value === "string") return value;
+    return JSON.stringify(value, null, 2);
+  } catch (_e) {
+    try {
+      return String(value);
+    } catch (_e2) {
+      return "[unserializable error payload]";
+    }
+  }
+}
+
+/**
+ * Map axios/network errors into a friendlier shape for the UI (Error-like object)
+ * Ensures err.message is informative and preserves status/detail fields when available.
+ */
 function toUserError(error) {
   const isAxios = !!error.isAxiosError;
   if (!isAxios) {
-    return { message: "Unexpected error", detail: String(error) };
+    const e = new Error("Unexpected error");
+    e.detail = String(error);
+    return e;
   }
+
+  // Timeout
   if (error.code === "ECONNABORTED") {
-    return {
-      message: "Request timed out",
-      hint:
-        "Backend may be unreachable or slow. Check that the server is running at " +
-        API_BASE,
-    };
+    const e = new Error("Request timed out");
+    e.hint =
+      "Backend may be unreachable or slow. Check that the server is running at " +
+      API_BASE;
+    return e;
   }
+
+  // Server responded with a status outside 2xx
   if (error.response) {
-    const status = error.response.status;
-    const data = error.response.data || {};
-    const detail = typeof data === "string" ? data : data.detail || data.message;
-    return {
-      message: data.message || `Request failed with status ${status}`,
-      status,
-      detail: detail || null,
-    };
+    const { status, data } = error.response;
+    let serverMsg = "";
+    if (typeof data === "string") {
+      serverMsg = data;
+    } else if (data && typeof data === "object") {
+      serverMsg = data.message || data.detail || "";
+    }
+    const message =
+      serverMsg ||
+      (status ? `Request failed with status ${status}` : "Request failed");
+
+    const e = new Error(message);
+    e.status = status || null;
+    // Include raw detail for optional UI display
+    e.detail =
+      typeof data === "string" ? data : data?.detail || data?.message || null;
+    return e;
   }
+
   // Network or CORS error: no response received
-  return {
-    message: "Network error",
-    hint:
-      "Possible CORS or connectivity issue. Ensure the backend is running at " +
-      API_BASE +
-      " and CORS allows http://localhost:3000.",
-    detail: error.message,
-  };
+  const e = new Error("Network error");
+  e.hint =
+    "Possible CORS or connectivity issue. Ensure the backend is running at " +
+    API_BASE +
+    " and CORS allows http://localhost:3000.";
+  e.detail = error.message;
+  return e;
 }
 
 // Simple one-time retry for network/timeouts
@@ -80,15 +117,18 @@ api.interceptors.response.use(
     const shouldRetry =
       !config.__retried &&
       (!error.response || error.code === "ECONNABORTED"); // network/timeout
+
     if (shouldRetry) {
       config.__retried = true;
       try {
         return await api.request(config);
       } catch (e) {
-        // Fall through to rejection with mapped error
+        // Reject with mapped user-friendly error
         return Promise.reject(toUserError(e));
       }
     }
+
+    // Reject with mapped user-friendly error (preserve message)
     return Promise.reject(toUserError(error));
   }
 );

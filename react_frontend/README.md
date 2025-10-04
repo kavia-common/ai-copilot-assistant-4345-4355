@@ -23,9 +23,19 @@ Then restart the React dev server (`npm start`) so the new env var is applied.
   - interceptors: one-time retry on network/timeout; improved error mapping
 - At runtime, the app logs the effective base URL to the console: `[API] Using base URL: ...`
 
+### Improved error logging and handling
+- Non-2xx responses are handled by axios and mapped to a readable `Error` with:
+  - `message` (UI-safe), optional `status`, optional `hint`, and optional `detail`.
+- The UI displays `err.message` to avoid `[object Object]`.
+- Additional server error payload details are logged to the browser console only.
+- A utility `safeStringify()` is available from `src/api.js` for safely logging server payloads.
+
 ## API routes used
 - POST `/api/ask` for sending the user's question.
 - GET `/api/health` for health checks.
+
+## Where to see detailed error info
+- Open the browser devtools console to view structured error logs, including status codes and backend-provided details.
 
 ## Troubleshooting Network/CORS errors
 - Ensure backend is running on the expected port: `http://localhost:3001` (or your configured `REACT_APP_API_BASE`)
