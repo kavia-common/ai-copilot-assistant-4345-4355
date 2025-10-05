@@ -12,3 +12,8 @@ Setup:
 Endpoints used:
 - POST /api/ask -> { answer, model }
 - GET /api/health
+
+## Data and Persistence
+This application does not include a database or any persistence layer as part of the current scope. The frontend is purely a UI that posts questions to the FastAPI backend; the backend forwards the request to the AI provider and returns an answer. No chat history or user data are stored, and each interaction is stateless.
+
+If you want to add features such as chat history or user accounts in the future, you will need to provision a database and update the backend to implement storage and retrieval. The frontend will also require updates to present and manage persisted state. Until then, no database configuration is required for running this app.
