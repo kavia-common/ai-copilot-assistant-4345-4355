@@ -1,4 +1,4 @@
- /* Ensure base URL is configurable via env */
+/* Ensure base URL is configurable via env (REACT_APP_API_BASE) */
 import axios from 'axios';
 
 // PUBLIC_INTERFACE
